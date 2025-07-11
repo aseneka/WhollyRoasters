@@ -12,6 +12,7 @@
     </ul>
 
     <form action="/register" method="POST" novalidate>
+        {{ form.hidden_tag() }}
         {{ form.uname.label }}</br>
         {{ form.uname }}</br>
         {{ form.pword.label }}</br>
