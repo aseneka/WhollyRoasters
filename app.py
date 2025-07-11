@@ -1,8 +1,19 @@
-from flask import Flask, render_template
+from forms import RegistrationForm
+from flask import Flask, render_template, request
 app = Flask(__name__)
-@app.route("/shop", methods=["GET"])
-def shop():
- cart = ["12oz Medium Roast", "24oz French Roast","960z Beans"]
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    message = ""
 
- return render_template("shop.html", cart=cart)
+    form = RegistrationForm()
 
+    if request.method == "POST":
+        if form.validate_on_submit():
+            username = form.data["uname"]
+            password = form.data["pword"]
+            confirm = form.data["confirm"]
+            message = f"Successfully registered {username}!"
+        else:
+            message = "Registration failed."
+
+    return render_template("register.html", message=message, form=form)
