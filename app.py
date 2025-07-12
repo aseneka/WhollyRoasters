@@ -1,6 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from forms import RegistrationForm
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 app = Flask(__name__)
 app.config['SECRET_KEY']='aseneka'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -22,7 +22,7 @@ with app.app_context():
         user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     def __repr__(self):
-    	return f"{self.full_name}'s address is {self.address}."
+        return f"{self.full_name}'s address is {self.address}."
 
     db.create_all()
     ShippingInfo.query.delete()
@@ -43,35 +43,42 @@ with app.app_context():
     db.session.add(ship1)
     db.session.add(ship2)
     db.session.commit()
-    
+
 @app.route("/admin", methods=["GET"])
 def admin():
-    users = User.query.all()
-    shippers = ShippingInfo.query.all()
-    return render_template("admin.html", users=users, shippers=shippers)
+    db_users = User.query.all()
+    db_shippers = ShippingInfo.query.all()
 
-@app.route("/register", methods=["GET", "POST"])
+    users = []
+    for db_user in db_users:
+        users.append({
+            "username": db_user.username, 
+            "id": db_user.id
+        })
+
+    shippers = []
+    for db_shipper in db_shippers:
+        shippers.append({
+            "full_name": db_shipper.full_name, 
+            "address": db_shipper.address, 
+            "user_id": db_shipper.user_id
+        })
+
+    return jsonify({
+        "users": users, 
+        "shippers": shippers
+    })
+
+## replace the /register route
+@app.route('/register', methods=['POST'])
 def register():
-    message = ""
+    json_data = request.get_json()
+    user_match = User.query.filter_by(username=json_data['uname']).first()
+    if user_match:
+        return jsonify({'Message': 'User already exists!'})
 
-    form = RegistrationForm()
+    new_user = User(username = json_data['uname'], password = json_data['pword'])
+    db.session.add(new_user)
+    db.session.commit()
 
-    if request.method == "POST":
-        if form.validate_on_submit():
-            user_match = User.query.filter_by(username=form.data['uname']).first()
-            if user_match:
-                message = "User already exists!"
-                return render_template("register.html", message=message, form=form)
-            us = User(
-                username = form.data["uname"],
-                password = form.data["pword"]
-            )
-            db.session.add(us)
-            db.session.commit()
-            confirm = form.data["confirm"]
-
-            ##message = f"Successfully registered {username}!"
-        else:
-            message = "Registration failed."
-
-    return render_template("register.html", message=message, form=form)
+    return jsonify({'Message': 'A new user was created!'}) 
